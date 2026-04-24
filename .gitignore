@@ -1,4 +1,9 @@
-target/
+node_modules/
+dist/
 .idea/
-.mvn/
-mvnw*
+.DS_Store
+scraped/
+scripts/
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts

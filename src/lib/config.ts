@@ -1,0 +1,19 @@
+import type { NamedMaps } from "./types";
+
+export const namedMaps: NamedMaps = {
+  types: { 0x04: "PING", 0x03: "PONG", 0x00: "HANDOFF", 0x01: "REQUEST", 0x02: "RESPONSE" },
+  devices: { 0x0c: "DP", 0x04: "PC", 0x02: "BT", 0x00: "MT" },
+  dataIds: {
+    0x18: "Battery level", 0x1a: "Max battery level", 0x32: "Battery serial#", 0x35: "CU3 date",
+    0x38: "Calibration A", 0x3a: "Calibration B", 0x3b: "Distance to maintenance", 0x5b: "Paired serial 1",
+    0x5c: "Paired serial 2", 0x80: "Total distance", 0x8e: "Time", 0x99: "Trip time", 0x9a: "Max speed",
+    0xb1: "Bat volts", 0xb8: "CU3 serial#", 0xbf: "CU3 button unit version", 0xc0: "Motor speed",
+    0xc1: "Motor distance", 0xd1: "Motor serial#",
+  },
+  commands: {
+    0x08: "GET DATA", 0x09: "PUT DATA", 0x14: "CU3: WAKE UP BATTERY", 0x17: "SHOW ERROR",
+    0x20: "GET DISPLAY SERIAL#", 0x26: "UPDATE DISPLAY(CU2)", 0x27: "UPDATE IDLE DISPLAY(CU2)",
+    0x28: "UPDATE DISPLAY(CU3)", 0x30: "TURN ON", 0x31: "TURN OFF", 0x32: "ENABLE ASSIST",
+    0x33: "DISABLE ASSIST", 0x34: "SET ASSIST LEVEL", 0x35: "CALIBRATE", 0x36: "THROTTLE",
+  },
+};
