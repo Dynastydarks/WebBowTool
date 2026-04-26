@@ -5,7 +5,7 @@ import { parseImportedFile } from "./lib/fileParser";
 import { checkMessage, cmd, decodeMessage, isHandoff, isPingOrPong } from "./lib/protocol/decoder";
 import { hex, withName } from "./lib/protocol/format";
 import type { BowMessage } from "./lib/types";
-import { calibrateTorqueWorkflow, clearErrWorkflow, pairBatteryWorkflow, pairDisplayWorkflow, probeSetMaxSpeedWorkflow, readMaxSpeedWorkflow, resetMaintenanceIntervalWorkflow, scanWorkflow } from "./lib/workflows/workflows";
+import { calibrateTorqueWorkflow, clearErrWorkflow, pairBatteryWorkflow, pairDisplayWorkflow, resetMaintenanceIntervalWorkflow, scanWorkflow } from "./lib/workflows/workflows";
 
 const orchestrator = new CommandOrchestrator();
 const aliasesKey = "bowtool.portAliases.v1";
@@ -37,11 +37,8 @@ export function App() {
   const [logs, setLogs] = useState<string[]>([]);
   const [showCredits, setShowCredits] = useState(false);
   const [followMessages, setFollowMessages] = useState(true);
-  const [maxSpeedProbeValue, setMaxSpeedProbeValue] = useState<number>(250);
-  const [safeTestMode, setSafeTestMode] = useState(true);
   const [filters, setFilters] = useState({ handoff: true, ping: true, invalid: true, getDataOnly: false, putDataOnly: false });
   const selectedPortObj = ports[selectedPort];
-  const riskyWriteBlocked = safeTestMode;
   const messageScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -147,8 +144,6 @@ export function App() {
       | ReturnType<typeof pairDisplayWorkflow>
       | ReturnType<typeof pairBatteryWorkflow>
       | ReturnType<typeof clearErrWorkflow>
-      | ReturnType<typeof readMaxSpeedWorkflow>
-      | ReturnType<typeof probeSetMaxSpeedWorkflow>
       | ReturnType<typeof calibrateTorqueWorkflow>
       | ReturnType<typeof resetMaintenanceIntervalWorkflow>,
   ) => {
@@ -221,35 +216,15 @@ export function App() {
 
       <section className="card">
         <h2>Actions</h2>
-        <p className={safeTestMode ? "ok" : "warn"} style={{ marginTop: 0 }}>
-          Safe Test Mode: {safeTestMode ? "ON (persistent/risky writes blocked)" : "OFF (risky writes enabled)"}
-        </p>
         <div className="row">
-          <label>
-            <input
-              type="checkbox"
-              checked={safeTestMode}
-              onChange={(e) => {
-                const next = e.target.checked;
-                if (!next) {
-                  const confirmed = window.confirm(
-                    "Disable Safe Test Mode? This enables potentially persistent writes.",
-                  );
-                  if (!confirmed) return;
-                }
-                setSafeTestMode(next);
-              }}
-            />
-            Safe Test Mode
-          </label>
           <button disabled={!connected || running} onClick={() => run(scanWorkflow(0x00))}>Scan motor</button>
           <button disabled={!connected || running} onClick={() => run(scanWorkflow(0x02))}>Scan battery</button>
           <button disabled={!connected || running} onClick={() => run(scanWorkflow(0x0c))}>Scan CU3</button>
-          <button disabled={!connected || running || riskyWriteBlocked} onClick={() => run(pairDisplayWorkflow())}>Pair display</button>
-          <button disabled={!connected || running || riskyWriteBlocked} onClick={() => run(pairBatteryWorkflow())}>Pair battery</button>
-          <button disabled={!connected || running || riskyWriteBlocked} onClick={() => run(clearErrWorkflow())}>Clear E0003</button>
+          <button disabled={!connected || running} onClick={() => run(pairDisplayWorkflow())}>Pair display</button>
+          <button disabled={!connected || running} onClick={() => run(pairBatteryWorkflow())}>Pair battery</button>
+          <button disabled={!connected || running} onClick={() => run(clearErrWorkflow())}>Clear E0003</button>
           <button
-            disabled={!connected || running || riskyWriteBlocked}
+            disabled={!connected || running}
             onClick={() => {
               if (!window.confirm("Reset maintenance interval? Writes PUT DATA 0x3b (four zeros) to battery, then read-back.")) return;
               run(resetMaintenanceIntervalWorkflow());
@@ -265,24 +240,6 @@ export function App() {
             }}
           >
             Calibrate torque sensor
-          </button>
-          <button disabled={!connected || running} onClick={() => run(readMaxSpeedWorkflow())}>Read max speed</button>
-          <input
-            type="number"
-            value={maxSpeedProbeValue}
-            min={0}
-            max={65535}
-            onChange={(e) => setMaxSpeedProbeValue(Number(e.target.value))}
-            style={{ width: "110px" }}
-          />
-          <button
-            disabled={!connected || running || riskyWriteBlocked}
-            onClick={() => {
-              if (!window.confirm("Experimental: probe a PUT DATA write for max speed. Continue?")) return;
-              run(probeSetMaxSpeedWorkflow(maxSpeedProbeValue));
-            }}
-          >
-            Probe set max speed
           </button>
           <button disabled={!running} className="danger" onClick={stop}>Stop</button>
           <button onClick={() => importFile(true)}>Open binary</button>

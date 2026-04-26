@@ -5,18 +5,6 @@ const ids = { motor: 0x00, bat: 0x02, pc: 0x04, display: 0x0c };
 const cmd = (m: BowMessage): number => m.message[3] ?? -1;
 const data = (m: BowMessage): number[] => m.message.slice(4, -1);
 
-const parseGetDataScalar = (payload: number[]): number | null => {
-  if (payload.length < 5) return null;
-  if (payload[0] !== 0x00) return null;
-  const flags = payload[1];
-  const id = payload[2];
-  if (id !== 0x9a) return null;
-  const size = ((flags & 0b1110) >> 1) || 1;
-  const bytes = payload.slice(3, 3 + size);
-  if (bytes.length !== size) return null;
-  return bytes.reduce((acc, cur) => (acc << 8) + cur, 0);
-};
-
 export const scanWorkflow = (target: number): Workflow => ({
   mode: target === ids.bat ? "WAKEUP_BAT" : "CHECK_BAT",
   sendCommand: async ({ sendGetData }) => sendGetData(target, 0x40, 0x5b),
@@ -106,80 +94,6 @@ export const resetMaintenanceIntervalWorkflow = (): Workflow => {
       }
       if (state === 2 && cmd(m) === 0x08) {
         log(`After: ${data(m).map((v) => v.toString(16).padStart(2, "0")).join("")}`);
-        return "DONE";
-      }
-      return "CONTINUE";
-    },
-  };
-};
-
-export const readMaxSpeedWorkflow = (): Workflow => {
-  const tryTypes = [0x04, 0x08, 0x00];
-  let typeIndex = 0;
-  return {
-    mode: "CHECK_BAT",
-    sendCommand: async ({ sendGetData, log }) => {
-      const type = tryTypes[typeIndex];
-      log(`Read max speed with GET DATA type=0x${type.toString(16).padStart(2, "0")}`);
-      await sendGetData(ids.motor, type, 0x9a);
-    },
-    handleResponse: async (message, { log }) => {
-      if (message.target !== ids.pc || message.type !== 0x02 || message.source !== ids.motor || cmd(message) !== 0x08) return "CONTINUE";
-      const payload = data(message);
-      if (payload[0] === 0x01 || payload[0] === 0x02) {
-        typeIndex += 1;
-        if (typeIndex >= tryTypes.length) {
-          log("Could not read max speed: no matching type or value not found.");
-          return "DONE";
-        }
-        return "SEND_COMMAND";
-      }
-      const value = parseGetDataScalar(payload);
-      if (value === null) {
-        log(`Max speed response received but could not parse scalar value: ${payload.map((v) => v.toString(16).padStart(2, "0")).join("")}`);
-      } else {
-        log(`Max speed read: ${value} (raw unit)`);
-      }
-      return "DONE";
-    },
-  };
-};
-
-export const probeSetMaxSpeedWorkflow = (speedValue: number): Workflow => {
-  let state: "READ_OLD" | "WRITE" | "READ_NEW" = "READ_OLD";
-  return {
-    mode: "CHECK_BAT",
-    sendCommand: async ({ sendGetData, sendPutData, log }) => {
-      if (state === "READ_OLD") {
-        log("Reading current max speed before probe write...");
-        await sendGetData(ids.motor, 0x04, 0x9a);
-      }
-      if (state === "WRITE") {
-        const hi = (speedValue >> 8) & 0xff;
-        const lo = speedValue & 0xff;
-        log(`Probing max speed write to ${speedValue} (0x${hi.toString(16).padStart(2, "0")}${lo.toString(16).padStart(2, "0")})`);
-        await sendPutData(ids.motor, 0x04, 0x9a, hi, lo);
-      }
-      if (state === "READ_NEW") {
-        await sendGetData(ids.motor, 0x04, 0x9a);
-      }
-    },
-    handleResponse: async (message, { log }) => {
-      if (message.target !== ids.pc || message.type !== 0x02 || message.source !== ids.motor) return "CONTINUE";
-      if (state === "READ_OLD" && cmd(message) === 0x08) {
-        const before = parseGetDataScalar(data(message));
-        log(before === null ? "Before value parse failed." : `Before max speed: ${before}`);
-        state = "WRITE";
-        return "SEND_COMMAND";
-      }
-      if (state === "WRITE" && cmd(message) === 0x09) {
-        log("PUT DATA response received for max-speed probe.");
-        state = "READ_NEW";
-        return "SEND_COMMAND";
-      }
-      if (state === "READ_NEW" && cmd(message) === 0x08) {
-        const after = parseGetDataScalar(data(message));
-        log(after === null ? "After value parse failed." : `After max speed: ${after}`);
         return "DONE";
       }
       return "CONTINUE";
