@@ -2,9 +2,11 @@
 
 React + TypeScript rewrite of BowTool using the Web Serial API.
 
-## Public deploy
+## Live deploy
 
-This repository does not embed a production URL. Host the contents of `dist/` (after `npm run build`) on any HTTPS origin you control so Web Serial works. Pull requests are welcome; wire your own pipeline or manual deploy after merge.
+BowTool Web is live at **[bowtool.dynastydarks.de](http://bowtool.dynastydarks.de/)**.
+
+The repository is mirrored/deployed from `main` (pull-based deployment). Änderungswünsche und Funktionserweiterungen sind ausdrücklich erwünscht: open a pull request with your proposal, and after review + merge it can be deployed live directly from this repo mirror.
 
 ## Requirements
 
